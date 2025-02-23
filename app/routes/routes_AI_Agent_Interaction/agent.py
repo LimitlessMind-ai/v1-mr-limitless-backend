@@ -88,9 +88,9 @@ async def entrypoint(ctx: JobContext):
 
     # Select greeting based on language
     greeting = {
-        "en": "I'm MindPrompt, a Prompt Engineering expert from LimitlessMind.ai. I'll help you craft highly effective prompts. Let's begin with your primary objective - what is the single, main goal of the prompt you want to create?",
-        "pl": "Jestem MindPrompt, ekspertem od Prompt Engineering z LimitlessMind.ai. Pomogę Ci stworzyć wysoce efektywne prompty. Zacznijmy od Twojego głównego celu - jaki jest pojedynczy, główny cel promptu, który chcesz stworzyć?",
-        "ko": "저는 LimitlessMind.ai의 프롬프트 엔지니어링 전문가 MindPrompt입니다. 효과적인 프롬프트를 만드는 것을 도와드리겠습니다. 먼저 주요 목표부터 시작하겠습니다 - 만들고자 하는 프롬프트의 단일 주요 목적이 무엇인가요?"
+        "en": "I'm Mr.Limitless, a Prompt Engineering expert from LimitlessMind.ai. I'll help you craft highly effective prompts. Let's begin with your primary objective - what is the single, main goal of the prompt you want to create?",
+        "pl": "Jestem Mr.Limitless, ekspertem od Prompt Engineering z LimitlessMind.ai. Pomogę Ci stworzyć wysoce efektywne prompty. Zacznijmy od Twojego głównego celu - jaki jest pojedynczy, główny cel promptu, który chcesz stworzyć?",
+        "ko": "저는 LimitlessMind.ai의 프롬프트 엔지니어링 전문가 Mr.Limitless입니다. 효과적인 프롬프트를 만드는 것을 도와드리겠습니다. 먼저 주요 목표부터 시작하겠습니다 - 만들고자 하는 프롬프트의 단일 주요 목적이 무엇인가요?"
     }.get(language.lower(), "I'm MindPrompt, a Prompt Engineering expert from LimitlessMind.ai. I'll help you craft highly effective prompts. Let's begin with your primary objective - what is the single, main goal of the prompt you want to create?")  # Default to English if language not supported
     
     # The agent should greet the user in their preferred language
