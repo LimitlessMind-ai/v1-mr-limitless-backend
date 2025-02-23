@@ -59,8 +59,8 @@ async def entrypoint(ctx: JobContext):
         llm=openai.LLM(model="gpt-4o-mini"),
         tts=elevenlabs.TTS(
             voice=elevenlabs.Voice(
-                id="tsq894MzvrjtuIYu6WS5",
-                name="Jin",
+                id="mo5VaKmYbjxTKoaqXTSF",
+                name="Mr.Limitless",
                 category="premade",
                 settings=elevenlabs.VoiceSettings(
                     stability=0.71,
