@@ -1,4 +1,5 @@
 import logging
+import json
 
 from dotenv import load_dotenv
 from livekit.agents import (
@@ -35,15 +36,14 @@ async def entrypoint(ctx: JobContext):
 
     # Wait for the first participant to connect
     participant = await ctx.wait_for_participant()
-    logger.info(f"starting voice assistant for participant {participant.identity}")
 
-    # This project is configured to use Deepgram STT, OpenAI LLM and Cartesia TTS plugins
-    # Other great providers exist like Cerebras, ElevenLabs, Groq, Play.ht, Rime, and more
-    # Learn more and pick the best one for your app:
-    # https://docs.livekit.io/agents/plugins
-    # Get the language from participant metadata
-    language = participant.metadata or "en"  # Default to English if not specified
+    # Parse metadata JSON string
+    metadata = json.loads(participant.metadata or '{"language": "en", "email": ""}')
+    language = metadata.get("language", "en")  # Default to English if not specified
+    email = metadata.get("email", "")  # Get email from metadata
     
+    logger.info(f"starting voice assistant for participant {participant.identity} with email {email}")
+
     # Map the language codes to Deepgram language codes
     deepgram_language = {
         "en": "en-US",
