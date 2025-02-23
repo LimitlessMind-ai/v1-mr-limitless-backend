@@ -1,61 +1,87 @@
-from __future__ import annotations
-
 import logging
-from dotenv import load_dotenv
 
-from livekit import rtc
+from dotenv import load_dotenv
 from livekit.agents import (
     AutoSubscribe,
     JobContext,
+    JobProcess,
+    WorkerOptions,
+    cli,
     llm,
+    metrics,
 )
-from livekit.agents.multimodal import MultimodalAgent
-from livekit.plugins import openai
-from livekit.plugins.openai.realtime import ServerVadOptions
-
+from livekit.agents.pipeline import VoicePipelineAgent
+from livekit.plugins import openai, deepgram, silero, elevenlabs
 from app.routes.routes_AI_Agent_Interaction.functions import AssistantFnc
-from app.routes.routes_AI_Agent_Interaction.prompt import get_initial_prompt
+from .prompt import SYSTEM_PROMPT
 
 
 load_dotenv(dotenv_path=".env.local")
-logger = logging.getLogger("my-worker")
-logger.setLevel(logging.INFO)
+logger = logging.getLogger("voice-agent")
+
+
+def prewarm(proc: JobProcess):
+    proc.userdata["vad"] = silero.VAD.load()
 
 
 async def entrypoint(ctx: JobContext):
+    initial_ctx = llm.ChatContext().append(
+        role="system",
+        text=SYSTEM_PROMPT,
+    )
+
     logger.info(f"connecting to room {ctx.room.name}")
     await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
 
+    # Wait for the first participant to connect
     participant = await ctx.wait_for_participant()
+    logger.info(f"starting voice assistant for participant {participant.identity}")
 
-    run_multimodal_agent(ctx, participant)
+    # This project is configured to use Deepgram STT, OpenAI LLM and Cartesia TTS plugins
+    # Other great providers exist like Cerebras, ElevenLabs, Groq, Play.ht, Rime, and more
+    # Learn more and pick the best one for your app:
+    # https://docs.livekit.io/agents/plugins
+    # Get the language from participant metadata
+    language = participant.metadata or "en"  # Default to English if not specified
+    
+    # Map the language codes to Deepgram language codes
+    deepgram_language = {
+        "en": "en-US",
+        "pl": "pl",
+        "ko": "ko"
+    }.get(language.lower(), "en-US")  # Default to English if language not supported
 
-    logger.info("agent started")
-
-
-def run_multimodal_agent(ctx: JobContext, participant: rtc.RemoteParticipant):
-    logger.info("starting multimodal agent")
-
-    model = openai.realtime.RealtimeModel(
-        instructions=get_initial_prompt(),
-        modalities=["audio", "text"],
-        voice="ash",
-        turn_detection=ServerVadOptions(
-            threshold=0.5,
-            prefix_padding_ms=300,
-            silence_duration_ms=500,
-        )
-    )
     fnc_ctx = AssistantFnc(ctx.room)
+    
+    agent = VoicePipelineAgent(
+        vad=ctx.proc.userdata["vad"],
+        stt=deepgram.STT(model="nova-3", language=deepgram_language),
+        llm=openai.LLM(model="gpt-4o-mini"),
+        tts=elevenlabs.TTS(voice=elevenlabs.Voice(id="tsq894MzvrjtuIYu6WS5", name="Jin", category="premade", settings=elevenlabs.VoiceSettings(stability=0.71, similarity_boost=0.5, style=0.0, use_speaker_boost=True))),
+        # minimum delay for endpointing, used when turn detector believes the user is done with their turn
+        min_endpointing_delay=0.5,
+        # maximum delay for endpointing, used when turn detector does not believe the user is done with their turn
+        max_endpointing_delay=5.0,
+        chat_ctx=initial_ctx,
+        fnc_ctx=fnc_ctx
+    )
+    
 
-    agent = MultimodalAgent(model=model, fnc_ctx=fnc_ctx)
+    # usage_collector = metrics.UsageCollector()
+
+    # @agent.on("metrics_collected")
+    # def on_metrics_collected(agent_metrics: metrics.AgentMetrics):
+    #     metrics.log_metrics(agent_metrics)
+    #     usage_collector.collect(agent_metrics)
+
     agent.start(ctx.room, participant)
 
-    session = model.sessions[0]
-    session.conversation.item.create(
-        llm.ChatMessage(
-            role="assistant",
-            content="Please begin the interaction with the user in a manner consistent with your instructions.",
-        )
-    )
-    session.response.create()
+    # Select greeting based on language
+    greeting = {
+        "en": "I'm MindPrompt, a Prompt Engineering expert from LimitlessMind.ai. I'll help you craft highly effective prompts. Let's begin with your primary objective - what is the single, main goal of the prompt you want to create?",
+        "pl": "Jestem MindPrompt, ekspertem od Prompt Engineering z LimitlessMind.ai. Pomogę Ci stworzyć wysoce efektywne prompty. Zacznijmy od Twojego głównego celu - jaki jest pojedynczy, główny cel promptu, który chcesz stworzyć?",
+        "ko": "저는 LimitlessMind.ai의 프롬프트 엔지니어링 전문가 MindPrompt입니다. 효과적인 프롬프트를 만드는 것을 도와드리겠습니다. 먼저 주요 목표부터 시작하겠습니다 - 만들고자 하는 프롬프트의 단일 주요 목적이 무엇인가요?"
+    }.get(language.lower(), "I'm MindPrompt, a Prompt Engineering expert from LimitlessMind.ai. I'll help you craft highly effective prompts. Let's begin with your primary objective - what is the single, main goal of the prompt you want to create?")  # Default to English if language not supported
+    
+    # The agent should greet the user in their preferred language
+    await agent.say(greeting, allow_interruptions=True)

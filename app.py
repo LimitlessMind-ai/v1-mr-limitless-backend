@@ -6,7 +6,7 @@ from livekit.agents import (
     Worker
 )
 from livekit.agents.cli.log import setup_logging
-from app.routes.routes_AI_Agent_Interaction.agent import entrypoint
+from app.routes.routes_AI_Agent_Interaction.agent import entrypoint, prewarm
 from app import app
 
 async def run_servers():
@@ -23,6 +23,7 @@ async def run_servers():
     # Create worker directly instead of using cli.run_app
     worker_options = WorkerOptions(
         entrypoint_fnc=entrypoint,
+        prewarm_fnc=prewarm,
         ws_url=os.getenv('LIVEKIT_URL'),
         api_key=os.getenv('LIVEKIT_API_KEY'),
         api_secret=os.getenv('LIVEKIT_API_SECRET')
@@ -43,4 +44,8 @@ async def run_servers():
     )
 
 if __name__ == "__main__":
+    # Force the use of SelectorEventLoop on Windows
+    if os.name == 'nt':  # Windows
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    
     asyncio.run(run_servers())
