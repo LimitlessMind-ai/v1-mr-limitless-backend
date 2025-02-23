@@ -51,7 +51,7 @@ async def entrypoint(ctx: JobContext):
         "ko": "ko"
     }.get(language.lower(), "en-US")  # Default to English if language not supported
 
-    fnc_ctx = AssistantFnc(ctx.room)
+    fnc_ctx = AssistantFnc(ctx.room, participant=participant)
     
     agent = VoicePipelineAgent(
         vad=ctx.proc.userdata["vad"],

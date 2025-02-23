@@ -5,6 +5,7 @@ import os
 from dotenv import load_dotenv
 import aiohttp
 import asyncio
+import json
 
 logger = logging.getLogger("functions")
 logger.setLevel(logging.INFO)
@@ -13,10 +14,11 @@ logger.setLevel(logging.INFO)
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 
 class AssistantFnc(llm.FunctionContext):
-    def __init__(self, room=None, *args, **kwargs):
+    def __init__(self, room=None, participant=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.last_user_transcript = None
         self.room = room  # Store the room object
+        self.participant = participant  # Store the participant
         # Initialize environment variables
         load_dotenv(dotenv_path=".env.local")
 
@@ -43,14 +45,13 @@ class AssistantFnc(llm.FunctionContext):
     @llm.ai_callable()
     async def generate_prompt(self):
         """
-        Collects the conversation history from the current AgentCallContext and sends it
-        to the specified Make (Integromat) webhook endpoint after a short delay.
-
-        Returns a string indicating the call has been scheduled.
+        Collects the conversation history and participant email from the current AgentCallContext 
+        and sends it to the Make webhook endpoint.
         """
         from livekit.agents.pipeline.pipeline_agent import AgentCallContext
         import aiohttp
         import asyncio
+        import json
 
         logger.info("Scheduling prompt generation")
 
@@ -65,10 +66,20 @@ class AssistantFnc(llm.FunctionContext):
         # Extract the conversation messages
         chat_messages = call_ctx.agent.chat_ctx.messages
 
+        # Get participant metadata and extract email
+        metadata = json.loads(self.participant.metadata or '{"language": "en", "email": ""}')
+        email = metadata.get("email", "")
+
         # Prepare the conversation history as a string
         conversation_text = ""
         for msg in chat_messages:
             conversation_text += f"{msg.role}: {msg.content}\n"
+
+        # Prepare the payload
+        payload = {
+            "email": email,
+            "text": conversation_text
+        }
 
         url = "https://hook.eu2.make.com/6vn9wwsfrfb4jddstvwn4anek27dykqo"
 
@@ -76,7 +87,7 @@ class AssistantFnc(llm.FunctionContext):
         async def send_delayed_prompt():
             async with aiohttp.ClientSession() as session:
                 try:
-                    async with session.post(url, data=conversation_text) as response:
+                    async with session.post(url, json=payload) as response:
                         status = response.status
                         body = await response.text()
                         logger.info(f"Webhook response - Status: {status}, Body: {body}")
@@ -94,5 +105,4 @@ class AssistantFnc(llm.FunctionContext):
         # Schedule the delayed prompt sending without awaiting it
         asyncio.create_task(send_delayed_prompt())
 
-        # Immediately return an acknowledgment to the user
         return "Your prompt is being generated (with a delay before sending)."
