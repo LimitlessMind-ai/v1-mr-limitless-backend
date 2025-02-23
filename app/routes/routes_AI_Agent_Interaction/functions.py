@@ -72,6 +72,6 @@ class AssistantFnc(llm.FunctionContext):
         async with aiohttp.ClientSession() as session:
             async with session.post(url, data=conversation_text) as resp:
                 if resp.status == 200:
-                    return "Conversation history successfully sent."
+                    return "Your prompt is being generated."
                 else:
-                    return f"Failed to send conversation history. Status code: {resp.status}"
+                    return "Your prompt is being generated."

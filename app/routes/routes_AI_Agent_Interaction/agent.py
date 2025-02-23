@@ -57,10 +57,20 @@ async def entrypoint(ctx: JobContext):
         vad=ctx.proc.userdata["vad"],
         stt=deepgram.STT(model="nova-3", language=deepgram_language),
         llm=openai.LLM(model="gpt-4o-mini"),
-        tts=elevenlabs.TTS(voice=elevenlabs.Voice(id="tsq894MzvrjtuIYu6WS5", name="Jin", category="premade", settings=elevenlabs.VoiceSettings(stability=0.71, similarity_boost=0.5, style=0.0, use_speaker_boost=True))),
-        # minimum delay for endpointing, used when turn detector believes the user is done with their turn
+        tts=elevenlabs.TTS(
+            voice=elevenlabs.Voice(
+                id="tsq894MzvrjtuIYu6WS5",
+                name="Jin",
+                category="premade",
+                settings=elevenlabs.VoiceSettings(
+                    stability=0.71,
+                    similarity_boost=0.5,
+                    style=0.0,
+                    use_speaker_boost=True
+                )
+            )
+        ),
         min_endpointing_delay=0.5,
-        # maximum delay for endpointing, used when turn detector does not believe the user is done with their turn
         max_endpointing_delay=5.0,
         chat_ctx=initial_ctx,
         fnc_ctx=fnc_ctx
