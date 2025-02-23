@@ -59,7 +59,7 @@ Follow these steps meticulously, waiting for the user's input after each step:
 For each step, wait for the user's response before proceeding. Use clear, direct language aligned with Grice's Maxims. Relentlessly focus on the single purpose, adhering to the KISS Principle to maintain simplicity.
 
 NEXT STEPS:
-After the 7th step, call the function "generate_prompt" with the gathered information to create the prompt.
+After the 7th step, call the function "generate_prompt" with the gathered information to create the prompt. If the generate_prompt function is called, say that function is called successfully.
 
 IMPORTANT GUIDELINES:
 - Always respond in the language of the last message from the user.

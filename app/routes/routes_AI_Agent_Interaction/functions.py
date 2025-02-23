@@ -43,14 +43,16 @@ class AssistantFnc(llm.FunctionContext):
     async def generate_prompt(self):
         """
         Collects the conversation history from the current AgentCallContext and sends it
-        to the specified Make (Integromat) webhook endpoint.
+        to the specified Make (Integromat) webhook endpoint after a short delay.
 
-        Returns a string indicating success or failure.
+        Returns a string indicating the call has been scheduled.
         """
         from livekit.agents.pipeline.pipeline_agent import AgentCallContext
         import aiohttp
+        import asyncio
 
-        # Retrieve the current AgentCallContext (which tracks the conversation history via chat_ctx)
+        logger.info("Scheduling prompt generation")
+
         try:
             call_ctx = AgentCallContext.get_current()
         except LookupError:
@@ -67,11 +69,19 @@ class AssistantFnc(llm.FunctionContext):
         for msg in chat_messages:
             conversation_text += f"{msg.role}: {msg.content}\n"
 
-        # Send the string directly without JSON wrapping
         url = "https://hook.eu2.make.com/6vn9wwsfrfb4jddstvwn4anek27dykqo"
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, data=conversation_text) as resp:
-                if resp.status == 200:
-                    return "Your prompt is being generated."
-                else:
-                    return "Your prompt is being generated."
+
+        # Create a delayed coroutine for sending the conversation text to the webhook
+        async def send_delayed_prompt():
+            async with aiohttp.ClientSession() as session:
+                try:
+                    async with session.post(url, data=conversation_text):
+                        pass
+                except Exception as e:
+                    logger.error(f"Failed to send prompt to webhook: {e}")
+
+        # Schedule the delayed prompt sending without awaiting it
+        asyncio.create_task(send_delayed_prompt())
+
+        # Immediately return an acknowledgment to the user
+        return "Your prompt is being generated (with a delay before sending)."
