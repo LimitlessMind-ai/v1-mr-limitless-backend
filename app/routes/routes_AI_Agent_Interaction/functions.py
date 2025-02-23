@@ -82,6 +82,10 @@ class AssistantFnc(llm.FunctionContext):
                         logger.info(f"Webhook response - Status: {status}, Body: {body}")
                         if status == 200:
                             return "Your prompt is being generated."
+                        if status == 100:
+                            logger.error(f"Quick prompt generation is completed.")
+                        if status == 101:
+                            logger.error(f"High quality prompt generation is completed.")
                         else:
                             logger.error(f"Webhook failed with status: {status}")
                 except Exception as e:
