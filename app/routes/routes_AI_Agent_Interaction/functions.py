@@ -4,6 +4,7 @@ from livekit.agents import llm
 import os
 from dotenv import load_dotenv
 import aiohttp
+import asyncio
 
 logger = logging.getLogger("functions")
 logger.setLevel(logging.INFO)
@@ -75,8 +76,14 @@ class AssistantFnc(llm.FunctionContext):
         async def send_delayed_prompt():
             async with aiohttp.ClientSession() as session:
                 try:
-                    async with session.post(url, data=conversation_text):
-                        pass
+                    async with session.post(url, data=conversation_text) as response:
+                        status = response.status
+                        body = await response.text()
+                        logger.info(f"Webhook response - Status: {status}, Body: {body}")
+                        if status == 200:
+                            return "Your prompt is being generated."
+                        else:
+                            logger.error(f"Webhook failed with status: {status}")
                 except Exception as e:
                     logger.error(f"Failed to send prompt to webhook: {e}")
 
